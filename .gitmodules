@@ -1,0 +1,8 @@
+[submodule "modx"]
+	path = modx
+	url = https://github.com/modxcms/revolution.git
+	branch = 2.x
+[submodule "modx/xpdo"]
+	path = modx/xpdo
+	url = https://github.com/modxcms/xpdo.git
+	branch = 2.x
