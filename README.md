@@ -8,5 +8,5 @@ https://github.com/gvozdb/modExtraLayout
 https://modx.pro/development/14919  
 https://github.com/bezumkin/modExtra  
 
-[See sample component](https://github.com/SintezCode/modx-sampleComponent)
+[See sample component](https://github.com/web-effect/modx-sampleComponent)
  
