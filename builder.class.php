@@ -1,5 +1,5 @@
 <?php
-if(!defined(MODX_CORE_PATH))define(MODX_CORE_PATH,  __DIR__.'/modx/');
+if(!defined(MODX_CORE_PATH))define(MODX_CORE_PATH,  __DIR__.'/modx/core/');
 require_once MODX_CORE_PATH.'model/modx/modx.class.php';
 
 class modX_idle extends modX {
@@ -11,7 +11,7 @@ class modX_idle extends modX {
         return [
             xPDO::OPT_CACHE_KEY => 'default',
             xPDO::OPT_CACHE_HANDLER => 'xPDOFileCache',
-            xPDO::OPT_CACHE_PATH => __DIR__ . '/modx/cache/',
+            xPDO::OPT_CACHE_PATH => MODX_CORE_PATH . 'cache/',
             xPDO::OPT_HYDRATE_FIELDS => true,
             xPDO::OPT_HYDRATE_RELATED_OBJECTS => true,
             xPDO::OPT_HYDRATE_ADHOC_FIELDS => true,
@@ -29,7 +29,7 @@ class modX_idle extends modX {
     protected function _loadConfig() {
         $this->config=[
             'dbtype'=>'mysql',
-            xPDO::OPT_CACHE_PATH => __DIR__ . '/modx/cache/',
+            xPDO::OPT_CACHE_PATH => MODX_CORE_PATH . 'cache/',
             xPDO::OPT_CACHE_FORMAT=>xPDOCacheManager::CACHE_PHP
         ];
         $this->_systemConfig = $this->config;
