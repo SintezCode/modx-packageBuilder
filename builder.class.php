@@ -82,12 +82,37 @@ class packageBuilder{
             '{assets_path}components/'.$this->config['component']['namespace'].'/'
         );
         
+        $this->addResolvers($this->config['component']['resolvers']['before']);
+        
         $this->data=$this->collectObjectsData();
         $keys=$this->createObjects($this->data);
         $this->addVehicles($this->data,$keys);
+        
+        $this->addResolvers($this->config['component']['resolvers']['after']);
+        
+        
         $this->setAttributes($this->config['component']['attributes']);
         
         $this->builder->pack();
+    }
+    
+    public function addResolvers($resolvers){
+        $this->vehicles[]=$this->builder->createVehicle(
+            ['source' => $this->config['vehicles'].'resolvers.vehicle.php',],
+            $this->addComponentInfo(['vehicle_class'=>'xPDOScriptVehicle'])
+        );
+        $vehicle=&$this->vehicles[count($this->vehicles)-1];
+        foreach($resolvers as $resolver){
+            $vehicle->resolve($resolver['type'],$resolver['options']);
+        }
+        $this->builder->putVehicle($vehicle);
+    }
+    
+    public function addComponentInfo($options=array()){
+        return array_merge(['component'=>[
+            'name' => $this->config['component']['name'],
+            'namespace' => $this->config['component']['namespace'],
+        ]],$options);
     }
     
     public function setAttributes($attributes){
@@ -96,11 +121,14 @@ class packageBuilder{
     
     public function addVehicles($data,$keys){
         foreach($keys as $i=>$key){
-            $this->vehicles[] = $this->builder->createVehicle($this->objects[$key]['object'],$this->objects[$key]['attrs']);
+            $this->vehicles[] = $this->builder->createVehicle(
+                $this->objects[$key]['object'],
+                $this->addComponentInfo($this->objects[$key]['attrs'])
+            );
             $vehicle=&$this->vehicles[count($this->vehicles)-1];
             list($class,$name)=explode('@',$key);
             $resolvers=array_values($data[$class][$name]['resolvers']?:[]);
-            if($i==0)$resolvers=array_merge(array_values($this->config['component']['resolvers']?:[]),$resolvers);
+            //if($i==0)$resolvers=array_merge(array_values($this->config['component']['resolvers']?:[]),$resolvers);
             foreach($resolvers as $resolver){
                 $vehicle->resolve($resolver['type'],$resolver['options']);
             }
