@@ -37,6 +37,13 @@ class modX_idle extends modX {
     }
     public function getObject($className, $criteria= null, $cacheFlag= true){
         switch(true){
+            case $className=='modContext':{
+                $ctx=$this->newObject('modContext',[
+                    'key'=>'mgr','name'=>'Manager','rank'=>0
+                ]);
+                $ctx->set('key','mgr');
+                return $ctx;
+            }
             case $className=='modWorkspace':{
                 return $this->newObject('modWorkspace',[
                     'path'=>MODX_CORE_PATH
@@ -69,11 +76,109 @@ class packageBuilder{
     public function __construct(&$modx,$config){
         $this->modx=$modx;
         $this->config=$config;
+        $this->config['component']['modelPath']=$this->config['component']['modelPath']?:($this->config['component']['core'].'model/');
+        $this->config['component']['schemaPath']=$this->config['component']['schemaPath']?:($this->config['component']['modelPath'].'schema/');
+        $this->config['component']['servicePath']=$this->config['component']['servicePath']?:($this->config['component']['modelPath'].$this->config['component']['namespace'].'/');
         
         $this->modx->loadClass('transport.modPackageBuilder','',false, true);
     }
     
+    public function getSchemaFile($dbtype='mysql'){
+        return $this->config['component']['schemaPath'].$this->config['component']['namespace'].'.'.$dbtype.'.schema.xml';
+    }
+    public function getMetadataFile($dbtype='mysql'){
+        return $this->config['component']['servicePath'].'metadata.'.$dbtype.'.php';
+    }
+    
+    public function updateModel(){
+        //Смотрим типы баз
+        $iterator = new RegexIterator(
+            new IteratorIterator(new DirectoryIterator(MODX_CORE_PATH.'model/schema/')),
+            '/^modx\.[\w]+\.schema\.xml$/i', RegexIterator::GET_MATCH
+        );
+        $iterator->rewind();
+        while($iterator->valid()){
+            preg_match('/^modx\.([\w]+)\.schema\.xml$/i',$iterator->getFilename(),$match);
+            $dbtype=$match[1];
+            $schema_file=$this->getSchemaFile($dbtype);
+            $meta_file=$this->getMetadataFile($dbtype);
+            
+            //По типам смотрим наличие схемы и файлов
+            $mask=(file_exists($schema_file)?1:0)|(file_exists($meta_file)?2:0);
+            switch(true){
+                case $mask==1:{
+                    //Только schema
+                    $this->parseSchema($dbtype,$schema_file);
+                    break;
+                }
+                case $mask==2:{
+                    //Только metadata
+                    $this->writeSchema($dbtype,$meta_file);
+                    break;
+                }
+                case $mask==3:{
+                    //И metadata и schema
+                    //проверяем последнюю дату изменений схемы и map файлов
+                    $meta_mtime=0;
+                    include $meta_file;
+                    foreach($xpdo_meta_map as $baseclass=>$arr){
+                        foreach($arr as $class){
+                            $mapfile=$this->config['component']['servicePath'].$dbtype.'/'.strtolower($class).'.map.inc.php';
+                            $file_mtime=filemtime($mapfile)?:0;
+                            if($meta_mtime<$file_mtime)$meta_mtime=$file_mtime;
+                        }
+                    }
+                    $schema_mtime=filemtime($schema_file);
+                    
+                    if($schema_mtime>=$meta_mtime){
+                        $this->parseSchema($dbtype,$schema_file);
+                    }else{
+                        $this->writeSchema($dbtype,$meta_file);
+                    }
+                }
+            }
+            
+            $iterator->next();
+        }
+    }
+    
+    public function parseSchema($dbtype,$schema_file=''){
+        if(!$schema_file)$schema_file=$this->getSchemaFile($dbtype);
+        if ($cache = $this->modx->getCacheManager()) {
+            $cache->deleteTree(
+                $this->config['component']['servicePath'].'/mysql',
+                ['deleteTop' => true, 'skipDirs' => false, 'extensions' => []]
+            );
+        }
+        $manager = $this->modx->getManager();
+        $generator = $manager->getGenerator();
+        $generator->parseSchema(
+            $schema_file,
+            $this->config['component']['modelPath']
+        );
+        touch($schema_file);
+    }
+    public function writeSchema($dbtype,$meta_file=''){
+        //writeSchema из xpdo/om/mysql/xpdogenerator.class.php
+        //использует базу поэтому придётся переписать этот метод для генерации из карт
+        if(!$meta_file)$meta_file=$this->getMetadataFile($dbtype);
+        
+        
+    }
+    
+    public function loadService(){
+        $this->service=$this->modx->getService(
+            $this->config['component']['namespace'],
+            $this->config['component']['name'],
+            $this->config['component']['servicePath']
+        );
+    }
+    
     public function build(){
+        $this->updateModel();
+        $this->loadService();
+        
+        /********************************************************/
         $this->builder = new modPackageBuilder($this->modx);
         $this->builder->createPackage($this->config['component']['namespace'],$this->config['component']['version'],$this->config['component']['release']);
         $this->builder->registerNamespace(
@@ -82,6 +187,7 @@ class packageBuilder{
             '{assets_path}components/'.$this->config['component']['namespace'].'/'
         );
         
+        /********************************************************/
         $this->addResolvers($this->config['component']['resolvers']['before']);
         
         $this->data=$this->collectObjectsData();
@@ -90,9 +196,10 @@ class packageBuilder{
         
         $this->addResolvers($this->config['component']['resolvers']['after']);
         
-        
+        /********************************************************/
         $this->setAttributes($this->config['component']['attributes']);
         
+        /********************************************************/
         $this->builder->pack();
     }
     
@@ -112,6 +219,9 @@ class packageBuilder{
         return array_merge(['component'=>[
             'name' => $this->config['component']['name'],
             'namespace' => $this->config['component']['namespace'],
+            'modelPath' => str_replace($this->config['component']['core'],'',$this->config['component']['modelPath']),
+            'schemaPath' => str_replace($this->config['component']['core'],'',$this->config['component']['schemaPath']),
+            'servicePath' => str_replace($this->config['component']['core'],'',$this->config['component']['servicePath']),
         ]],$options);
     }
     
