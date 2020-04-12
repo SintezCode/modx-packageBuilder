@@ -169,7 +169,7 @@ class packageBuilder{
     public function loadService(){
         $this->service=$this->modx->getService(
             $this->config['component']['namespace'],
-            $this->config['component']['name'],
+            $this->config['component']['serviceName']?:$this->config['component']['name'],
             $this->config['component']['servicePath']
         );
     }
@@ -219,6 +219,7 @@ class packageBuilder{
         return array_merge(['component'=>[
             'name' => $this->config['component']['name'],
             'namespace' => $this->config['component']['namespace'],
+            'serviceName'=>$this->config['component']['serviceName']?:$this->config['component']['name'],
             'modelPath' => str_replace($this->config['component']['core'],'',$this->config['component']['modelPath']),
             'schemaPath' => str_replace($this->config['component']['core'],'',$this->config['component']['schemaPath']),
             'servicePath' => str_replace($this->config['component']['core'],'',$this->config['component']['servicePath']),
