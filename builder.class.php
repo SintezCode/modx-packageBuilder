@@ -223,6 +223,7 @@ class packageBuilder{
             'modelPath' => str_replace($this->config['component']['core'],'',$this->config['component']['modelPath']),
             'schemaPath' => str_replace($this->config['component']['core'],'',$this->config['component']['schemaPath']),
             'servicePath' => str_replace($this->config['component']['core'],'',$this->config['component']['servicePath']),
+            'packages' => $this->config['component']['packages'],
         ]],$options);
     }
     
